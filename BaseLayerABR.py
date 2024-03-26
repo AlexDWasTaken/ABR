@@ -1,7 +1,7 @@
 import numpy as np
 from pulp import LpMaximize, LpMinimize, LpProblem, LpStatus, lpSum, LpVariable, CPLEX_CMD, GUROBI_CMD, PULP_CBC_CMD, COIN_CMD
 
-class ABRProblem:
+class BaseLayerABR:
     def __init__(self, N, V, t0, frame_size, previous_q_ij, previous_D, up_link, down_link, client_weight, metrics, fps, msg):
         self.problem = LpProblem(name="Base Layer ABR", sense=LpMinimize)
         self.msg = msg
@@ -135,10 +135,7 @@ if __name__ == '__main__':
 
 
     # Create an instance of the ABRProblem class
-    abr = ABRProblem(**test_parameters)
+    abr = BaseLayerABR(**test_parameters)
 
     # Solve the problem
     abr.solve()
-
-    # Print the problem
-    # print(abr)

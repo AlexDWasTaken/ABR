@@ -5,7 +5,7 @@ import random
 import linecache
 
 class FCCDataLoader:
-    def __init__(self, index_file, log_path=None, log_file=None, log_every=200, threshold=np.inf):
+    def __init__(self, index_file, log_path=None, log_file=None, log_every=200, threshold=np.inf, msg=False, name="FCCDataLoader"):
         self.index_file_path = index_file
         self.log = []
         self.file_path = self.get_random_line(self.index_file_path).strip()
@@ -16,10 +16,13 @@ class FCCDataLoader:
         self.log_every = log_every
         self.threshold = threshold
         self.yield_count = 0
+        self.msg = msg
+        self.name = name
         if self.log_path is not None:
             if not os.path.exists(self.log_path):
                 os.makedirs(self.log_path)
             self.log_file = self.concatenate_path(self.log_path, self.log_file)
+            # Clear the log file
             with open(self.log_file, 'w') as f:
                 f.write('')
             self.log_count = 0
@@ -74,7 +77,14 @@ class FCCDataLoader:
             self.log.append(thoroughput)
             self.count += 1
             self.yield_count += 1
+            print(f"Loader {self.name} Switched to new trace: {self.file_path.split('/')[-1]}.")
             return thoroughput
+
+    def tick(self):
+        try:
+            return next(self)
+        except StopIteration:
+            return None
 
 class FCCRecoveryDataLoader:
     def __init__(self, recover_log_path):
@@ -82,6 +92,12 @@ class FCCRecoveryDataLoader:
 
     def __iter__(self):
         return map(int, (line for line in open(self.path)))
+    
+    def tick(self):
+        try:
+            return next(self)
+        except StopIteration:
+            return None
 
 
 if __name__ == '__main__':
