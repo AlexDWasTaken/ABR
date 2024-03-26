@@ -62,7 +62,7 @@ class SemanticSelector:
 
         model += lpSum([I_send[i] * self.L[i] for i in range(self.N)]) + lpSum([I_receive_kp[i][j] * self.G_kp[i][j] for i in range(self.N) for j in range(self.N)]) + lpSum([I_receive_sound[i][j] * self.G_sound[i][j] for i in range(self.N) for j in range(self.N)])
 
-        # 添加约束
+        # Add constraints
         sum_kp, sum_sound, sum_send = None, None, None
 
         for j in range(self.N):
@@ -82,7 +82,7 @@ class SemanticSelector:
             for j in range(self.N):
                 model += (I_send[i] >= I_receive_kp[i][j])
 
-        # 求解问题
+        # Solve the problem
         status = model.solve(solver=solver)
 
         print(f"status: {model.status}, {LpStatus[model.status]}")
@@ -119,7 +119,7 @@ class SemanticSelector:
 
         model += lpSum([I_send[i] * self.L[i] for i in range(self.N)]) + lpSum([I_receive_kp[i][j] * self.G_kp[i][j] for i in range(self.N) for j in range(self.N)])
 
-        # 添加约束
+        # Add constraints
         sum_kp, sum_sound, sum_send = None, 0, None
 
         for j in range(self.N):
@@ -139,7 +139,7 @@ class SemanticSelector:
             for j in range(self.N):
                 model += (I_send[i] >= I_receive_kp[i][j])
 
-        # 求解问题
+        # Solve the problem
         status = model.solve(solver=solver)
 
         print(f"status: {model.status}, {LpStatus[model.status]}")
