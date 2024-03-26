@@ -107,7 +107,7 @@ for i in range(N):
 print(type(full_QoE))
 problem += V * full_QoE + stability
 
-print(problem)
+#print(problem)
 
 # Solve the problem
 solver = PULP_CBC_CMD(msg=msg)
