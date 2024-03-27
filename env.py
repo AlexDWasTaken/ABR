@@ -47,6 +47,7 @@ class Environment:
                  kp_cost: np.ndarray = np.array([1, 1, 1]),
                  sr_cost: np.ndarray = np.array([1, 1, 1]),
                  sound_cost: np.ndarray = np.array([.5, .5, .5]),
+                 cost_constraints: np.ndarray = np.array([3.5, 3.5, 3.5]),
                  sr_func: function = lambda x: x + 2 * np.log(np.abs(x)),     #Here, the functions are just for testing purposes
                  kp_func: function = lambda x: x+2,     #The actual functions should be passed as arguments
                  sound_func: function = lambda x: x+1,
@@ -66,6 +67,7 @@ class Environment:
         self.kp_cost = kp_cost
         self.sr_cost = sr_cost
         self.sound_cost = sound_cost
+        self.cost_constraints = cost_constraints
         self.sr_func = sr_func
         self.kp_func = kp_func
         self.sound_func = sound_func
@@ -143,4 +145,17 @@ class Environment:
             kp_gain, sound_gain = self.bandit.get_gains()
         
         # Step3: Use the estimated value and Semantic Selector to do the selection process.
+        selector_data = {
+            "N": self.N,
+            "G_kp": kp_gain,
+            "G_sound": sound_gain,
+            "msg": self.msg,
+            "R": self.cost_constraints,
+            "L": 0 if self.iterarion_count == 0 else 0 #TODO: Finish up after finish the logic for the first iteration.
+        }
+        semantic_selector = SemanticSelector(**selector_data)
+        semantic_selector.solve_with_sound()
+        I_receive_kp, I_receive_sound, I_send_kp = semantic_selector.get_choices()
+
+        #TODO: Finish strategy adapter after this.
         

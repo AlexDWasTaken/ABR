@@ -44,7 +44,7 @@ class SemanticSelector:
             for row in G_sound:
                 f.write(" ".join([str(x) for x in row]) + "\n")
     
-    def get_values(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_choices(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.I_receive_kp_values, self.I_receive_sound_values, self.I_send_values
 
     def solve_with_sound(self, print_details=False, solver=PULP_CBC_CMD):
