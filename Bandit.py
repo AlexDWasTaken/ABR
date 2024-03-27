@@ -1,7 +1,6 @@
 import numpy as np
 
 class Bandit:
-    #TODO: Implement Multiarmed Bandit class
     def __init__(self, N, alpha):
         self.__N = N
         self.__Q = np.zeros((N, N))
