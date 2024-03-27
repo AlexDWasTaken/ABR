@@ -13,6 +13,9 @@ class SemanticSelector:
         self.G_kp = G_kp
         self.G_sound = G_sound
         self.msg = msg
+        self.I_receive_kp_values = None
+        self.I_receive_sound_values = None
+        self.I_send_values = None
 
     def save_data_to_file(self, file_path):
         data = {
@@ -40,6 +43,9 @@ class SemanticSelector:
             f.write("\n")
             for row in G_sound:
                 f.write(" ".join([str(x) for x in row]) + "\n")
+    
+    def get_values(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return self.I_receive_kp_values, self.I_receive_sound_values, self.I_send_values
 
     def solve_with_sound(self, print_details=False, solver=PULP_CBC_CMD):
         solver = solver(msg=self.msg)
@@ -96,7 +102,10 @@ class SemanticSelector:
         I_receive_kp_values = np.array([[I_receive_kp[i][j].value() for j in range(self.N)] for i in range(self.N)])
         I_receive_sound_values = np.array([[I_receive_sound[i][j].value() for j in range(self.N)] for i in range(self.N)])
         I_send_values = np.array([I_send[i].value() for i in range(self.N)])
-        return model.objective.value(), I_receive_kp_values, I_receive_sound_values, I_send_values
+        self.I_receive_kp_values = I_receive_kp_values
+        self.I_receive_sound_values = I_receive_sound_values
+        self.I_send_values = I_send_values
+        return model
 
     def solve_without_sound(self, print_details=False, solver=PULP_CBC_CMD):
         solver = solver(msg=self.msg)
@@ -153,7 +162,10 @@ class SemanticSelector:
         I_receive_kp_values = np.array([[I_receive_kp[i][j].value() for j in range(self.N)] for i in range(self.N)])
         #I_receive_sound_values = np.array([[I_receive_sound[i][j].value() for j in range(self.N)] for i in range(self.N)])
         I_send_values = np.array([I_send[i].value() for i in range(self.N)])
-        return model.objective.value(), I_receive_kp_values, None, I_send_values
+        self.I_receive_kp_values = I_receive_kp_values
+        self.I_receive_sound_values = None
+        self.I_send_values = I_send_values
+        return model
     
 
 if __name__ == '__main__':

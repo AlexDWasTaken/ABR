@@ -2,7 +2,7 @@ import numpy as np
 from pulp import LpMaximize, LpMinimize, LpProblem, LpStatus, lpSum, LpVariable, CPLEX_CMD, GUROBI_CMD, PULP_CBC_CMD, COIN_CMD
 
 class BaseLayerABR:
-    def __init__(self, N, V, t0, frame_size, previous_q_ij, previous_D, up_link, down_link, client_weight, metrics, fps, msg):
+    def __init__(self, N, V, t0, frame_size, previous_q_ij, previous_D, up_link, down_link, client_weight, metrics, fps, msg, frame_q = None):
         self.problem = LpProblem(name="Base Layer ABR", sense=LpMinimize)
         self.msg = msg
 
@@ -11,7 +11,7 @@ class BaseLayerABR:
         self.V = V
         self.t0 = t0
         self.frame_size = np.array(frame_size)
-        self.frame_q = np.log(np.array(self.frame_size))
+        self.frame_q = np.log(np.array(self.frame_size)) if not frame_q else frame_q
         self.choice_num = len(self.frame_size)
         self.previous_q_ij = previous_q_ij
         self.previous_D = previous_D
@@ -99,6 +99,7 @@ class BaseLayerABR:
                 stability += self.previous_D[i, j] * (get_send_size(j) / self.up_link[j] + get_receive_size(i, j) / self.down_link[j] - self.t0)
 
         # Final Objective
+        # full_QoE is already negative, so we do not need to add a negative sign here.
         self.problem += self.V * full_QoE + stability
 
     def option_generator(self, problem: LpProblem, n, name):
@@ -116,17 +117,14 @@ class BaseLayerABR:
         print(f"status: {self.problem.status}, {LpStatus[self.problem.status]}") if self.msg else None
         return status, self.problem#.objective.value()
     
-    def get_results(self):
-
-        def convert_back(data):
-            data_value = np.vectorize(lambda x: x.value())(data)
-            data_converted = np.argmax(data_value, axis=-1)
-            return data_converted
-        
-        send_option = convert_back(self.send_option)
-        receive_option = convert_back(self.receive_option)
-        #TODO: Return rest of the necessary values.
-
+    def convert_back(self, data):
+        data_value = np.vectorize(lambda x: x.value())(data)
+        data_converted = np.argmax(data_value, axis=-1)
+        return data_converted
+    
+    def get_options(self):
+        send_option = self.convert_back(self.send_option)
+        receive_option = self.convert_back(self.receive_option)
         return send_option, receive_option
 
     def __str__(self):
