@@ -27,6 +27,7 @@ class BaseLayerABR:
         self.fps = fps
 
         # Define Variables
+        # One do not need to send to oneself, but the indicator will still be generated.
         self.send_option = [self.option_generator(self.problem, n=self.choice_num, name=f"send_option_{i}_") for i in range(self.N)]
         self.receive_option = [[self.option_generator(self.problem, n=self.choice_num, name=f"receive_option_{i}_to_{j}_") for j in range(self.N)] for i in range(self.N)]
 
@@ -60,8 +61,11 @@ class BaseLayerABR:
                 total_send_size += self.send_option[i][k] * self.frame_size[k]
             self.problem += (total_send_size * self.fps <= self.up_link[i])
 
+
         # Define Objective
         # Step 1: QoE Related Objective
+        # there are many 'if i!=j else 0.0' in the following functions, 
+        # since one do not need to send to oneself and that part of QoE will be discarded.
         def get_send_size(i):
             return lpSum((self.frame_size[k] * self.send_option[i][k] for k in range(self.choice_num))) if i != j else 0.0
 
@@ -105,12 +109,25 @@ class BaseLayerABR:
         problem += (m == 1)
         return variables
 
-    def solve(self):
+    def solve(self, solver_msg=False):
         # Solve the problem
-        solver = PULP_CBC_CMD(msg=self.msg)
+        solver = PULP_CBC_CMD(msg=solver_msg)
         status = self.problem.solve(solver=solver)
-        print(f"status: {self.problem.status}, {LpStatus[self.problem.status]}")
-        return status, self.problem.objective.value()
+        print(f"status: {self.problem.status}, {LpStatus[self.problem.status]}") if self.msg else None
+        return status, self.problem#.objective.value()
+    
+    def get_results(self):
+
+        def convert_back(data):
+            data_value = np.vectorize(lambda x: x.value())(data)
+            data_converted = np.argmax(data_value, axis=-1)
+            return data_converted
+        
+        send_option = convert_back(self.send_option)
+        receive_option = convert_back(self.receive_option)
+        #TODO: Return rest of the necessary values.
+
+        return send_option, receive_option
 
     def __str__(self):
         return str(self.problem)
@@ -138,4 +155,4 @@ if __name__ == '__main__':
     abr = BaseLayerABR(**test_parameters)
 
     # Solve the problem
-    abr.solve()
+    abr.solve(solver_msg=True)
