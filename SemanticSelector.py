@@ -47,7 +47,7 @@ class SemanticSelector:
     def get_choices(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.I_receive_kp_values, self.I_receive_sound_values, self.I_send_values
 
-    def solve_with_sound(self, print_details=False, solver=PULP_CBC_CMD):
+    def solve_with_sound(self, print_details=False, solver=PULP_CBC_CMD, alpha=1, beta=1, gamma=1):
         solver = solver(msg=self.msg)
         model = LpProblem(name="not-big-problem", sense=LpMaximize)
         I_send = []
@@ -61,10 +61,6 @@ class SemanticSelector:
             for j in range(self.N):
                 I_receive_kp[i].append(LpVariable(name=f"I_receive_kp_{i}_{j}", lowBound=0, upBound=1, cat="Integer"))
                 I_receive_sound[i].append(LpVariable(name=f"I_receive_sound_{i}_{j}", lowBound=0, upBound=1, cat="Integer"))
-
-        alpha = 1
-        beta = 1
-        gamma = 1
 
         model += lpSum([I_send[i] * self.L[i] for i in range(self.N)]) + lpSum([I_receive_kp[i][j] * self.G_kp[i][j] for i in range(self.N) for j in range(self.N)]) + lpSum([I_receive_sound[i][j] * self.G_sound[i][j] for i in range(self.N) for j in range(self.N)])
 
@@ -107,7 +103,7 @@ class SemanticSelector:
         self.I_send_values = I_send_values
         return model
 
-    def solve_without_sound(self, print_details=False, solver=PULP_CBC_CMD):
+    def solve_without_sound(self, print_details=False, solver=PULP_CBC_CMD, alpha=1, beta=1, gamma=1):
         solver = solver(msg=self.msg)
         model = LpProblem(name="not-big-problem", sense=LpMaximize)
         I_send = []
@@ -121,10 +117,6 @@ class SemanticSelector:
             for j in range(self.N):
                 I_receive_kp[i].append(LpVariable(name=f"I_receive_kp_{i}_{j}", lowBound=0, upBound=1, cat="Integer"))
                 #I_receive_sound[i].append(LpVariable(name=f"I_receive_sound_{i}_{j}", lowBound=0, upBound=1, cat="Integer"))
-
-        alpha = 1
-        beta = 1
-        gamma = 1
 
         model += lpSum([I_send[i] * self.L[i] for i in range(self.N)]) + lpSum([I_receive_kp[i][j] * self.G_kp[i][j] for i in range(self.N) for j in range(self.N)])
 

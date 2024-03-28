@@ -47,6 +47,7 @@ class Environment:
                  kp_cost: np.ndarray = np.array([1, 1, 1]),
                  sr_cost: np.ndarray = np.array([1, 1, 1]),
                  sound_cost: np.ndarray = np.array([.5, .5, .5]),
+                 kp_send_cost: np.ndarray = np.array([.4, .5, .6]),
                  cost_constraints: np.ndarray = np.array([3.5, 3.5, 3.5]),
                  sr_func: function = lambda x: x + 2 * np.log(np.abs(x)),     #Here, the functions are just for testing purposes
                  kp_func: function = lambda x: x+2,     #The actual functions should be passed as arguments
@@ -67,6 +68,7 @@ class Environment:
         self.kp_cost = kp_cost
         self.sr_cost = sr_cost
         self.sound_cost = sound_cost
+        self.kp_send_cost = kp_send_cost
         self.cost_constraints = cost_constraints
         self.sr_func = sr_func
         self.kp_func = kp_func
@@ -124,7 +126,6 @@ class Environment:
         receive_bitrate = self.frame_size[receive_option]
         raw_visual_quality = self.frame_q[receive_bitrate]
 
-
         # Step2: Estimate gains based on previous network conditions
         if self.iteration_count > 0:
             # Update the bandit.
@@ -151,11 +152,35 @@ class Environment:
             "G_sound": sound_gain,
             "msg": self.msg,
             "R": self.cost_constraints,
-            "L": 0 if self.iterarion_count == 0 else 0 #TODO: Finish up after finish the logic for the first iteration.
+            "L": 0 if self.iterarion_count == 0 else 0, #TODO: Finish up after finish the logic for the first iteration.
+            "alpha": self.kp_cost,
+            "beta": self.sound_cost,
+            "gamma": self.kp_send_cost,
         }
         semantic_selector = SemanticSelector(**selector_data)
         semantic_selector.solve_with_sound()
         I_receive_kp, I_receive_sound, I_send_kp = semantic_selector.get_choices()
 
-        #TODO: Finish strategy adapter after this.
-        
+        # TODO: Finish strategy adapter after this.
+        # Now the available data is:
+        # send_bitrate, receive_bitrate: These are raw sending/receiving bitrate before the semantic selection decision.
+        # I_receive_kp, I_receive_sound, I_send_kp: These are sending/receiving decisions of the semantic selector.
+        # up_link, down_link: These are the current network conditions.
+        # What we have to do is to refine the decisions based on the network conditions,
+        # since the semantic selector saves network bandwidth by sending less data.
+        # We make optimization of decisions for each of the user.
+        # I_receive_kp[i][j]: the decision of ith users' generated kp is used by jth user.
+
+        adapter_data = {
+            "N": self.N,
+            "I_receive_kp": I_receive_kp,
+            "I_receive_sound": I_receive_sound,
+            "I_send_kp": I_send_kp,
+            "up_link": up_link,
+            "down_link": down_link,
+            "send_bitrate": send_bitrate,
+            "receive_option": receive_option,
+            "receive_bitrate": receive_bitrate,
+            "cost_constraints": self.cost_constraints,
+            "msg": self.msg
+        }
