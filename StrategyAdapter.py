@@ -3,19 +3,25 @@ from QualityConverter import Converter
 
 def adapt_strategy(N, I_reveive_kp: np.ndarray, I_receive_sound: np.ndarray, I_send_kp: np.ndarray, 
                    up_link: list[int], down_link: list[int], receive_option: np.ndarray,
-                   send_bitrate: np.ndarray, receive_bitrate: np.ndarray, 
-                   cost_constraints: np.ndarray, frame_size: list[int], 
-                   kp_cost = 1, sr_cost = 0.8, kp_compute_cost = 0.5, sound_cost = 0.5,  msg=False):
+                   send_bitrate: np.ndarray, receive_bitrate: np.ndarray, raw_receive_QoE: np.ndarray,
+                   cost_constraints: np.ndarray, frame_size: list[int], converter: Converter, 
+                   kp_cost: np.ndarray, sr_cost: np.ndarray, kp_compute_cost: np.ndarray, sound_cost: np.ndarray,
+                    sr_gain, msg=False) -> dict:
     I_reveive_kp, I_receive_sound, I_send_kp = I_reveive_kp.copy(), I_receive_sound.copy(), I_send_kp.copy()
     total_options = len(frame_size)
 
-    sr_decisions = np.zeros((N, N))
+    I_receive_sr = np.zeros((N, N))
     for user_index in range(N):
         user_uplink, user_downlink = up_link[user_index], down_link[user_index]
         user_send_bitrate, user_receive_bitrate = send_bitrate[user_index], receive_bitrate[:, user_index]
         user_receive_option = receive_option[:, user_index]
         user_receive_sound, user_receive_kp = I_receive_sound[:, user_index], I_reveive_kp[user_index]
-        user_sr_decision = sr_decisions[:, user_index]
+        user_I_receive_sr = I_receive_sr[:, user_index]
+        user_sr_cost = sr_cost[user_index]
+        user_kp_cost = kp_cost[user_index]
+        user_kp_compute_cost = kp_compute_cost[user_index]
+        user_sound_cost = sound_cost[user_index]
+        user_raw_QoE = raw_receive_QoE[:, user_index]
 
         if msg:
             print("=*"*20)
@@ -54,23 +60,28 @@ def adapt_strategy(N, I_reveive_kp: np.ndarray, I_receive_sound: np.ndarray, I_s
                         break
             else:
                 break
+        # Secondly, finalize sr decisions.
+        free_resource = cost_constraints[user_index] - np.sum(user_receive_kp) * user_kp_cost - np.sum(user_receive_sound) * user_sound_cost - I_send_kp[user_index] * user_kp_compute_cost
         
         if msg:
             print("--"*10)
             print("Finalizing SR decisions.")
-        # Secondly, finalize sr decisions.
-        free_resource = cost_constraints[user_index] - np.sum(user_receive_kp) * kp_cost - np.sum(user_receive_sound) * sound_cost - I_send_kp[user_index] * kp_compute_cost
-        
+            print(free_resource)
+        while free_resource >= user_sr_cost:
+            # Find the best option to upgrade
+            things = np.vectorize(sr_gain)(user_receive_bitrate) - np.vectorize(converter.b_to_q)(user_receive_bitrate) - 100 * user_I_receive_sr
+            best_option = np.argmax(things)
+            if msg:
+                print("best_option:", best_option)
 
+            user_I_receive_sr[best_option] = 1
+            free_resource -= user_sr_cost
 
-
-        
-        
 
     result = {
             "receive_option": receive_option,
             "receive_bitrate": frame_size[receive_option],
-            "I_receive_sr": None
+            "I_receive_sr": I_receive_sr
     }
     return result
 
@@ -86,12 +97,16 @@ if __name__ == "__main__":
     down_link = [7, 5, 8]
     receive_option = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]])
     send_bitrate = np.array([1, 1, 1])
+    quality = np.log2(frame_size)
     receive_bitrate = np.array(frame_size[receive_option])
+    raw_receive_QoE = np.log(receive_bitrate) + 10
     cost_constraints = np.array([4, 4, 3])
-    kp_cost = 1
-    sr_cost = 0.8
-    sound_cost = 0.5
-    kp_compute_cost = 0.5
+    kp_cost = np.array([1] * 3)
+    sr_cost = np.array([0.8] * 3)
+    sound_cost = np.array([0.5] * 3)
+    kp_compute_cost = np.array([0.5] * 3)
+    converter = Converter(N, frame_size, quality)
+    sr_gain = lambda x: x + 2 * np.log(np.abs(x))
 
     test_arguments = {
         "N": N,
@@ -109,7 +124,10 @@ if __name__ == "__main__":
         "kp_cost": kp_cost,
         "sr_cost": sr_cost,
         "sound_cost": sound_cost,
-        "kp_compute_cost": kp_compute_cost
+        "kp_compute_cost": kp_compute_cost,
+        "converter": converter,
+        "sr_gain": sr_gain,
+        "raw_receive_QoE": raw_receive_QoE
     }
 
     result = adapt_strategy(**test_arguments)

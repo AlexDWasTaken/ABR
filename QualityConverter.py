@@ -1,4 +1,6 @@
 import functools
+import numpy as np
+
 N = 0
 bitrate = []
 quality = []
@@ -18,7 +20,7 @@ class Converter:
     @staticmethod
     @functools.lru_cache(maxsize=200)
     def b_to_n(b: int) -> int:
-        return bitrate.index(b)
+        return np.where(bitrate == b)[0][0]
     
     @staticmethod
     @functools.lru_cache(maxsize=200)
@@ -28,14 +30,14 @@ class Converter:
     @staticmethod
     @functools.lru_cache(maxsize=200)
     def q_to_n(Q: int) -> int:
-        return quality.index(Q)
+        return np.where(quality == Q)[0][0]
     
     @staticmethod
     @functools.lru_cache(maxsize=200)
     def b_to_q(b: int) -> int:
-        return quality[bitrate.index(b)]
+        return quality[np.where(bitrate == b)[0][0]]
     
     @staticmethod
     @functools.lru_cache(maxsize=200)
     def q_to_b(Q: int) -> int:
-        return bitrate[quality.index(Q)]
+        return bitrate[np.where(quality == Q)[0][0]]
