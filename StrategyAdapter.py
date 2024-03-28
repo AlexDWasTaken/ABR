@@ -1,24 +1,27 @@
 import numpy as np
+from QualityConverter import Converter
 
 def adapt_strategy(N, I_reveive_kp: np.ndarray, I_receive_sound: np.ndarray, I_send_kp: np.ndarray, 
                    up_link: list[int], down_link: list[int], receive_option: np.ndarray,
                    send_bitrate: np.ndarray, receive_bitrate: np.ndarray, 
-                   cost_constraints: np.ndarray, frame_size: list[int], msg=False):
+                   cost_constraints: np.ndarray, frame_size: list[int], 
+                   kp_cost = 1, sr_cost = 0.8, kp_compute_cost = 0.5, sound_cost = 0.5,  msg=False):
     I_reveive_kp, I_receive_sound, I_send_kp = I_reveive_kp.copy(), I_receive_sound.copy(), I_send_kp.copy()
     total_options = len(frame_size)
 
-    #Firstly, do bandwidth decisions.
+    sr_decisions = np.zeros((N, N))
     for user_index in range(N):
         user_uplink, user_downlink = up_link[user_index], down_link[user_index]
         user_send_bitrate, user_receive_bitrate = send_bitrate[user_index], receive_bitrate[:, user_index]
         user_receive_option = receive_option[:, user_index]
         user_receive_sound, user_receive_kp = I_receive_sound[:, user_index], I_reveive_kp[user_index]
+        user_sr_decision = sr_decisions[:, user_index]
 
         if msg:
-            print("="*20)
+            print("=*"*20)
             print("User", user_index)
 
-
+        #Firstly, do bandwidth decisions.
         # Free the bandwidth for the user
         free_bandwidth = user_downlink - np.sum(np.logical_or(user_receive_sound, user_receive_kp) * user_receive_bitrate)
         #sorted_indices = np.argsort(user_receive_bitrate) # Sort the indices of the receive_bitrate from low to high
@@ -51,6 +54,15 @@ def adapt_strategy(N, I_reveive_kp: np.ndarray, I_receive_sound: np.ndarray, I_s
                         break
             else:
                 break
+        
+        if msg:
+            print("--"*10)
+            print("Finalizing SR decisions.")
+        # Secondly, finalize sr decisions.
+        free_resource = cost_constraints[user_index] - np.sum(user_receive_kp) * kp_cost - np.sum(user_receive_sound) * sound_cost - I_send_kp[user_index] * kp_compute_cost
+        
+
+
 
         
         
@@ -67,7 +79,7 @@ def adapt_strategy(N, I_reveive_kp: np.ndarray, I_receive_sound: np.ndarray, I_s
 if __name__ == "__main__":
     N = 3
     frame_size = np.array([5, 4, 3, 2, 1])
-    I_reveive_kp = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    I_reveive_kp = np.array([[0, 1, 0], [0, 0, 0], [1, 0, 0]])
     I_receive_sound = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     I_send_kp = np.array([1, 1, 1])
     up_link = [8, 10, 9]
@@ -75,9 +87,32 @@ if __name__ == "__main__":
     receive_option = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]])
     send_bitrate = np.array([1, 1, 1])
     receive_bitrate = np.array(frame_size[receive_option])
-    cost_constraints = np.array([1, 1, 1])
+    cost_constraints = np.array([4, 4, 3])
+    kp_cost = 1
+    sr_cost = 0.8
+    sound_cost = 0.5
+    kp_compute_cost = 0.5
 
-    result = adapt_strategy(N, I_reveive_kp, I_receive_sound, I_send_kp, up_link, down_link, receive_option, send_bitrate, receive_bitrate, cost_constraints, frame_size, True)
+    test_arguments = {
+        "N": N,
+        "I_reveive_kp": I_reveive_kp,
+        "I_receive_sound": I_receive_sound,
+        "I_send_kp": I_send_kp,
+        "up_link": up_link,
+        "down_link": down_link,
+        "receive_option": receive_option,
+        "send_bitrate": send_bitrate,
+        "receive_bitrate": receive_bitrate,
+        "cost_constraints": cost_constraints,
+        "frame_size": frame_size,
+        "msg": True,
+        "kp_cost": kp_cost,
+        "sr_cost": sr_cost,
+        "sound_cost": sound_cost,
+        "kp_compute_cost": kp_compute_cost
+    }
+
+    result = adapt_strategy(**test_arguments)
     import rich
     for key, value in result.items():
         rich.print(f"{key}:")
